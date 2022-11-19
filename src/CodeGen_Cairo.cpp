@@ -218,8 +218,12 @@ string print_cairo(const vector<Function> &output_funcs) {
 
     // Now convert that to pseudocode
     std::ostringstream sstr;
-    CodeGen_Cairo pln(sstr, env);
-    s.accept(&pln);
+    IRPrinter irp = IRPrinter(sstr);
+    irp.print(s);
+    
+    //CodeGen_Cairo pln(sstr, env);
+    //s.accept(&pln);
+
     return sstr.str();
 }
 
