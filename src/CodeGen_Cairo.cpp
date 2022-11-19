@@ -36,6 +36,17 @@ CodeGen_Cairo::CodeGen_Cairo(ostream &s)
     s << "Cairo Instructions:\n";
 }
 
+void CodeGen_Cairo::visit(const AssertStmt *op) {
+    // stream << get_indent() << "assert\n";
+    /*
+    stream << get_indent() << "assert(";
+    print_no_parens(op->condition);
+    stream << ", ";
+    print_no_parens(op->message);
+    stream << ")\n";
+    */
+}
+
 string print_cairo(const Module& mod) {
 
     // Now convert that to pseudocode

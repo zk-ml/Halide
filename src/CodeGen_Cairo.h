@@ -16,6 +16,11 @@ namespace Internal {
 class CodeGen_Cairo: public IRPrinter {
 public:
     CodeGen_Cairo(std::ostream &dest);
+
+protected:
+    using IRPrinter::visit;
+    
+    void visit(const AssertStmt *) override;
 };
 
 class Function;
