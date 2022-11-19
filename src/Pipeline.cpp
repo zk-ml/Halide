@@ -330,6 +330,11 @@ void Pipeline::compile_to_c(const string &filename,
     m.compile(single_output(filename, m, OutputFileType::c_source));
 }
 
+void Pipeline::compile_to_cairo() {
+    user_assert(defined()) << "Can't print loop nest of undefined Pipeline.\n";
+    debug(0) << Halide::Internal::print_loop_nest(contents->outputs);
+}
+
 void Pipeline::print_loop_nest() {
     user_assert(defined()) << "Can't print loop nest of undefined Pipeline.\n";
     debug(0) << Halide::Internal::print_loop_nest(contents->outputs);

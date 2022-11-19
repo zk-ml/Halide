@@ -3300,6 +3300,10 @@ void Func::compile_to_c(const string &filename, const vector<Argument> &args,
     pipeline().compile_to_c(filename, args, fn_name, target);
 }
 
+void Func::compile_to_cairo() {
+    pipeline().compile_to_cairo();
+}
+
 void Func::compile_to_lowered_stmt(const string &filename,
                                    const vector<Argument> &args,
                                    StmtOutputFormat fmt,
