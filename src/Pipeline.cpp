@@ -5,6 +5,7 @@
 #include "Argument.h"
 #include "Callable.h"
 #include "CodeGen_Internal.h"
+#include "CodeGen_Cairo.h"
 #include "FindCalls.h"
 #include "Func.h"
 #include "IRVisitor.h"
@@ -332,7 +333,7 @@ void Pipeline::compile_to_c(const string &filename,
 
 void Pipeline::compile_to_cairo() {
     user_assert(defined()) << "Can't print loop nest of undefined Pipeline.\n";
-    debug(0) << Halide::Internal::print_loop_nest(contents->outputs);
+    debug(0) << "Cairo: \n" << Halide::Internal::print_cairo(contents->outputs);
 }
 
 void Pipeline::print_loop_nest() {

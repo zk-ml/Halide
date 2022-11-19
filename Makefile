@@ -427,6 +427,7 @@ SOURCE_FILES = \
   ClampUnsafeAccesses.cpp \
   CodeGen_ARM.cpp \
   CodeGen_C.cpp \
+  CodeGen_Cairo.cpp \
   CodeGen_D3D12Compute_Dev.cpp \
   CodeGen_GPU_Dev.cpp \
   CodeGen_Hexagon.cpp \
@@ -607,6 +608,7 @@ HEADER_FILES = \
   ClampUnsafeAccesses.h \
   Closure.h \
   CodeGen_C.h \
+  CodeGen_Cairo.h \
   CodeGen_D3D12Compute_Dev.h \
   CodeGen_GPU_Dev.h \
   CodeGen_Internal.h \
