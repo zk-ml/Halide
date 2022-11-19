@@ -6,11 +6,17 @@
  * Defines methods to print out the loop nest corresponding to a schedule.
  */
 
+#include "IRPrinter.h"
 #include <string>
 #include <vector>
 
 namespace Halide {
 namespace Internal {
+
+class CodeGen_Cairo: public IRPrinter {
+public:
+    CodeGen_Cairo(std::ostream &dest);
+};
 
 class Function;
 

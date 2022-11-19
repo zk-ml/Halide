@@ -406,7 +406,7 @@ void Pipeline::compile_to_cairo() {
                                  custom_passes);
     }
 
-    debug(0) << "Cairo: \n" << Halide::Internal::print_cairo(contents->module);
+    debug(0) << Halide::Internal::print_cairo(contents->module);
 }
 
 void Pipeline::print_loop_nest() {
