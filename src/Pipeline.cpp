@@ -332,8 +332,81 @@ void Pipeline::compile_to_c(const string &filename,
 }
 
 void Pipeline::compile_to_cairo() {
-    user_assert(defined()) << "Can't print loop nest of undefined Pipeline.\n";
-    debug(0) << "Cairo: \n" << Halide::Internal::print_cairo(contents->outputs);
+    user_assert(defined()) << "Can't compile undefined Pipeline.\n";
+
+    for (const Function &f : contents->outputs) {
+        user_assert(f.has_pure_definition() || f.has_extern_definition())
+            << "Can't compile Pipeline with undefined output Func: " << f.name() << ".\n";
+    }
+
+    const string fn_name = "cairo_fn";
+    const vector<Argument> args;
+    const LinkageType linkage_type = LinkageType::ExternalPlusMetadata;
+
+    string new_fn_name(fn_name);
+    if (new_fn_name.empty()) {
+        new_fn_name = generate_function_name();
+    }
+    // internal_assert(!new_fn_name.empty()) << "new_fn_name cannot be empty\n";
+    // TODO: Assert that the function name is legal
+
+    vector<Argument> lowering_args(args);
+
+    Target target = get_host_target();
+    //for (DeviceAPI api : all_device_apis) {
+    //    target.set_feature(target_feature_for_device_api(DeviceAPI(api)));
+    //}
+    
+    // If the target specifies user context but it's not in the args
+    // vector, add it at the start (the jit path puts it in there
+    // explicitly).
+    const bool requires_user_context = target.has_feature(Target::UserContext);
+    bool has_user_context = false;
+    for (const Argument &arg : lowering_args) {
+        if (arg.name == contents->user_context_arg.arg.name) {
+            has_user_context = true;
+        }
+    }
+    if (requires_user_context && !has_user_context) {
+        lowering_args.insert(lowering_args.begin(), contents->user_context_arg.arg);
+    }
+
+    const Module &old_module = contents->module;
+
+    bool same_compile = !old_module.functions().empty() && old_module.target() == target;
+    // Either generated name or one of the LoweredFuncs in the existing module has the same name.
+    same_compile = same_compile && fn_name.empty();
+    bool found_name = false;
+    for (const auto &lf : old_module.functions()) {
+        if (lf.name == fn_name) {
+            found_name = true;
+            break;
+        }
+    }
+    same_compile = same_compile && found_name;
+    // Number of args + number of outputs is the same as total args in existing LoweredFunc
+    same_compile = same_compile && (lowering_args.size() + outputs().size()) == old_module.functions().front().args.size();
+    // The initial args are the same.
+    same_compile = same_compile && std::equal(lowering_args.begin(), lowering_args.end(), old_module.functions().front().args.begin());
+    // Linkage is the same.
+    same_compile = same_compile && old_module.functions().front().linkage == linkage_type;
+    // The outputs of a Pipeline cannot change, so no need to test them.
+
+    if (same_compile) {
+        // We can avoid relowering and just reuse the existing module.
+        debug(2) << "Reusing old module\n";
+    } else {
+        vector<IRMutator *> custom_passes;
+        for (const CustomLoweringPass &p : contents->custom_lowering_passes) {
+            custom_passes.push_back(p.pass);
+        }
+
+        contents->module = lower(contents->outputs, new_fn_name, target, lowering_args,
+                                 linkage_type, contents->requirements, contents->trace_pipeline,
+                                 custom_passes);
+    }
+
+    debug(0) << "Cairo: \n" << Halide::Internal::print_cairo(contents->module);
 }
 
 void Pipeline::print_loop_nest() {

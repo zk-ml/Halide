@@ -18,6 +18,77 @@
 #include "UniquifyVariableNames.h"
 #include "WrapCalls.h"
 
+#include "Lower.h"
+#include "AddAtomicMutex.h"
+#include "AddImageChecks.h"
+#include "AddParameterChecks.h"
+#include "AllocationBoundsInference.h"
+#include "AsyncProducers.h"
+#include "BoundSmallAllocations.h"
+#include "Bounds.h"
+#include "BoundsInference.h"
+#include "CSE.h"
+#include "CanonicalizeGPUVars.h"
+#include "ClampUnsafeAccesses.h"
+#include "CompilerLogger.h"
+#include "Debug.h"
+#include "DebugArguments.h"
+#include "DebugToFile.h"
+#include "Deinterleave.h"
+#include "EarlyFree.h"
+#include "ExtractTileOperations.h"
+#include "FindCalls.h"
+#include "FindIntrinsics.h"
+#include "FlattenNestedRamps.h"
+#include "Func.h"
+#include "Function.h"
+#include "FuseGPUThreadLoops.h"
+#include "FuzzFloatStores.h"
+#include "HexagonOffload.h"
+#include "IRMutator.h"
+#include "IROperator.h"
+#include "IRPrinter.h"
+#include "InferArguments.h"
+#include "InjectHostDevBufferCopies.h"
+#include "Inline.h"
+#include "LICM.h"
+#include "LoopCarry.h"
+#include "LowerParallelTasks.h"
+#include "LowerWarpShuffles.h"
+#include "Memoization.h"
+#include "OffloadGPULoops.h"
+#include "PartitionLoops.h"
+#include "Prefetch.h"
+#include "Profiling.h"
+#include "PurifyIndexMath.h"
+#include "Qualify.h"
+#include "RealizationOrder.h"
+#include "RebaseLoopsToZero.h"
+#include "RemoveDeadAllocations.h"
+#include "RemoveExternLoops.h"
+#include "RemoveUndef.h"
+#include "ScheduleFunctions.h"
+#include "SelectGPUAPI.h"
+#include "Simplify.h"
+#include "SimplifyCorrelatedDifferences.h"
+#include "SimplifySpecializations.h"
+#include "SkipStages.h"
+#include "SlidingWindow.h"
+#include "SplitTuples.h"
+#include "StorageFlattening.h"
+#include "StorageFolding.h"
+#include "StrictifyFloat.h"
+#include "Substitute.h"
+#include "Tracing.h"
+#include "TrimNoOps.h"
+#include "UnifyDuplicateLets.h"
+#include "UniquifyVariableNames.h"
+#include "UnpackBuffers.h"
+#include "UnrollLoops.h"
+#include "UnsafePromises.h"
+#include "VectorizeLoops.h"
+#include "WrapCalls.h"
+
 #include <tuple>
 
 namespace Halide {
@@ -162,67 +233,15 @@ private:
 
 }  // namespace
 
-string print_cairo(const vector<Function> &output_funcs) {
-    // Do the first part of lowering:
-
-    // Create a deep-copy of the entire graph of Funcs.
-    auto [outputs, env] = deep_copy(output_funcs, build_environment(output_funcs));
-
-    // Output functions should all be computed and stored at root.
-    for (const Function &f : outputs) {
-        Func(f).compute_root().store_root();
-    }
-
-    // Finalize all the LoopLevels
-    for (auto &iter : env) {
-        iter.second.lock_loop_levels();
-    }
-
-    // Substitute in wrapper Funcs
-    env = wrap_func_calls(env);
-
-    // Compute a realization order and determine group of functions which loops
-    // are to be fused together
-    auto [order, fused_groups] = realization_order(outputs, env);
-
-    // Try to simplify the RHS/LHS of a function definition by propagating its
-    // specializations' conditions
-    simplify_specializations(env);
-
-    // For the purposes of printing the loop nest, we don't want to
-    // worry about which features are and aren't enabled.
-    Target target = get_host_target();
-    for (DeviceAPI api : all_device_apis) {
-        target.set_feature(target_feature_for_device_api(DeviceAPI(api)));
-    }
-
-    bool any_memoized = false;
-    // Schedule the functions.
-    Stmt s = schedule_functions(outputs, fused_groups, env, target, any_memoized);
-
-    // Compute the maximum and minimum possible value of each
-    // function. Used in later bounds inference passes.
-    FuncValueBounds func_bounds = compute_function_value_bounds(order, env);
-
-    // This pass injects nested definitions of variable names, so we
-    // can't simplify statements from here until we fix them up. (We
-    // can still simplify Exprs).
-    s = bounds_inference(s, outputs, order, fused_groups, env, func_bounds, target);
-    s = remove_extern_loops(s);
-    s = sliding_window(s, env);
-    s = simplify_correlated_differences(s);
-    s = allocation_bounds_inference(s, env, func_bounds);
-    s = remove_undef(s);
-    s = uniquify_variable_names(s);
-    s = simplify(s, false);
+string print_cairo(const Module& mod) {
 
     // Now convert that to pseudocode
     std::ostringstream sstr;
     IRPrinter irp = IRPrinter(sstr);
-    irp.print(s);
     
-    //CodeGen_Cairo pln(sstr, env);
-    //s.accept(&pln);
+    for (const auto &f : mod.functions()) {
+        irp.print(f.body);
+    }
 
     return sstr.str();
 }
