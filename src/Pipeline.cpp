@@ -401,7 +401,7 @@ void Pipeline::compile_to_cairo() {
             custom_passes.push_back(p.pass);
         }
 
-        contents->module = lower(contents->outputs, new_fn_name, target, lowering_args,
+        contents->module = lower_cairo(contents->outputs, new_fn_name, target, lowering_args,
                                  linkage_type, contents->requirements, contents->trace_pipeline,
                                  custom_passes);
     }

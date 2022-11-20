@@ -47,6 +47,56 @@ void CodeGen_Cairo::visit(const AssertStmt *op) {
     */
 }
 
+void CodeGen_Cairo::visit(const Call *op) {
+    // TODO: Print indication of C vs C++?
+    if (op->name == "add_image_checks_marker") {
+        return;
+    }
+    if (op->name == "_halide_buffer_get_host") {
+        print_list(op->args);
+        return;
+    }
+    if (!known_type.contains(op->name) &&
+        (op->type != Int(32))) {
+        if (op->type.is_handle()) {
+            stream << op->type;  // Already has parens
+        } else {
+            stream << "(" << op->type << ")";
+        }
+    }
+    stream << op->name << "(";
+    print_list(op->args);
+    stream << ")";
+}
+
+void CodeGen_Cairo::visit(const Cast *op) {
+    if (op->type == type_of<halide_buffer_t *>()) {
+        print(op->value);
+        return;
+    }
+    stream << op->type << "(";
+    print(op->value);
+    stream << ")";
+}
+
+void CodeGen_Cairo::visit(const Variable *op) {
+    if (op->type == type_of<halide_buffer_t *>()) {
+        stream << op->name;
+        return;
+    }
+    if (!known_type.contains(op->name) &&
+        (op->type != Int(32))) {
+        // Handle types already have parens
+        if (op->type.is_handle()) {
+            stream << op->type;
+        } else {
+            stream << "(" << op->type << ")";
+        }
+    }
+    stream << op->name;
+}
+
+
 string print_cairo(const Module& mod) {
 
     // Now convert that to pseudocode

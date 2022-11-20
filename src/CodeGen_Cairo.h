@@ -21,6 +21,9 @@ protected:
     using IRPrinter::visit;
     
     void visit(const AssertStmt *) override;
+    void visit(const Call *) override;
+    void visit(const Cast *) override;
+    void visit(const Variable *) override;
 };
 
 class Function;
