@@ -24,6 +24,9 @@ protected:
     void visit(const Call *) override;
     void visit(const Cast *) override;
     void visit(const Variable *) override;
+    void visit(const Let *) override;
+    void visit(const LetStmt *) override;
+    void visit(const ProducerConsumer *) override;
 };
 
 class Function;

@@ -96,6 +96,38 @@ void CodeGen_Cairo::visit(const Variable *op) {
     stream << op->name;
 }
 
+void CodeGen_Cairo::visit(const Let *op) {
+    ScopedBinding<> bind(known_type, op->name);
+    open();
+    stream << op->name << " = ";
+    print(op->value);
+    stream << " in ";
+    print(op->body);
+    close();
+}
+
+void CodeGen_Cairo::visit(const LetStmt *op) {
+    ScopedBinding<> bind(known_type, op->name);
+    stream << get_indent() << op->name << " = ";
+    print_no_parens(op->value);
+    stream << "\n";
+
+    print(op->body);
+}
+
+void CodeGen_Cairo::visit(const ProducerConsumer *op) {
+    stream << get_indent();
+    if (op->is_producer) {
+        // stream << "produce " << op->name << " {\n";
+    } else {
+        assert(false);
+        // stream << "consume " << op->name << " {\n";
+    }
+    // indent++;
+    print(op->body);
+    // indent--;
+    // stream << get_indent() << "}\n";
+}
 
 string print_cairo(const Module& mod) {
 
@@ -107,8 +139,23 @@ string print_cairo(const Module& mod) {
     //   irp.print(f.body);
     // }
 
+    sstr << "Input Buffers: \n";
+    for (const auto &b : mod.buffers()) {
+        sstr << b.name() << "\n";
+    }
+    sstr << "\n";
+
+    for (const auto &f : mod.functions()) {
+        sstr << f.name << " arg Buffers: \n" ;
+        for (const auto &a : f.args) {
+            sstr << a.name << "\n";
+        }
+    }
+    sstr << "\n";
+
     CodeGen_Cairo pln(sstr);
     for (const auto &f : mod.functions()) {
+        sstr << f.name << "\n";
         pln.print(f.body);
     }
 
