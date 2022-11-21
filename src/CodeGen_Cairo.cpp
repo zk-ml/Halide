@@ -60,7 +60,10 @@ void CodeGen_Cairo::visit(const Call *op) {
         print_list(op->args);
         return;
     }
-    if (op->name == "_halide_buffer_get_min") {
+    if (op->name == "_halide_buffer_get_min" ||
+        op->name == "_halide_buffer_get_stride" ||
+        op->name == "_halide_buffer_get_extent"
+        ) {
         assert(op->args.size() == 2);
         const StringImm* bufname = (const StringImm *)(op->args[0].get());
         const uint64_t d = ((const UIntImm *)(op->args[1].get()))->value;
@@ -69,10 +72,18 @@ void CodeGen_Cairo::visit(const Call *op) {
         assert(is_buffer ^ is_arg);
         if (is_buffer) {
             Buffer<uint8_t> buf = buffer_map[bufname->value];
-            stream << buf.dim(d).min();
+            if (op -> name == "_halide_buffer_get_min") {
+                stream << buf.dim(d).min();
+            }
+            if (op -> name == "_halide_buffer_get_stride") {
+                stream << buf.dim(d).stride();
+            }
+            if (op -> name == "_halide_buffer_get_extent") {
+                stream << buf.dim(d).extent();
+            }
         } else {
             LoweredArgument arg = arg_map[bufname->value];
-            stream << arg.argument_estimates.buffer_estimates[d].min;
+            stream << arg.name << op->name << "[" << d << "]";
         }
         return;
     }
