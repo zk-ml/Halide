@@ -15,7 +15,12 @@ namespace Internal {
 
 class CodeGen_Cairo: public IRPrinter {
 public:
-    CodeGen_Cairo(std::ostream &dest);
+    CodeGen_Cairo(std::ostream &dest, 
+        std::map<std::string, Buffer<uint8_t>> buffer_map,
+        std::map<std::string, LoweredArgument> arg_map);
+
+    std::map<std::string, Buffer<uint8_t>> buffer_map;
+    std::map<std::string, LoweredArgument> arg_map;
 
 protected:
     using IRPrinter::visit;

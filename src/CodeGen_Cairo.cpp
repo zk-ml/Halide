@@ -31,8 +31,12 @@ using std::ostringstream;
 using std::string;
 using std::vector;
 
-CodeGen_Cairo::CodeGen_Cairo(ostream &s)
+CodeGen_Cairo::CodeGen_Cairo(ostream &s, 
+    std::map<std::string, Buffer<uint8_t>> _buffer_map,
+    std::map<std::string, LoweredArgument> _arg_map)
     : IRPrinter(s) {
+    buffer_map = _buffer_map;
+    arg_map = _arg_map;
     s << "Cairo Instructions:\n";
 }
 
@@ -54,6 +58,22 @@ void CodeGen_Cairo::visit(const Call *op) {
     }
     if (op->name == "_halide_buffer_get_host") {
         print_list(op->args);
+        return;
+    }
+    if (op->name == "_halide_buffer_get_min") {
+        assert(op->args.size() == 2);
+        const StringImm* bufname = (const StringImm *)(op->args[0].get());
+        const uint64_t d = ((const UIntImm *)(op->args[1].get()))->value;
+        bool is_buffer = buffer_map.find(bufname->value) != buffer_map.end();
+        bool is_arg = arg_map.find(bufname->value) != arg_map.end();
+        assert(is_buffer ^ is_arg);
+        if (is_buffer) {
+            Buffer<uint8_t> buf = buffer_map[bufname->value];
+            stream << buf.dim(d).min();
+        } else {
+            LoweredArgument arg = arg_map[bufname->value];
+            stream << arg.argument_estimates.buffer_estimates[d].min;
+        }
         return;
     }
     if (!known_type.contains(op->name) &&
@@ -138,10 +158,13 @@ string print_cairo(const Module& mod) {
     // for (const auto &f : mod.functions()) {
     //   irp.print(f.body);
     // }
+    std::map<std::string, Buffer<uint8_t>> buffer_map;
+    std::map<std::string, LoweredArgument> arg_map;
 
     sstr << "Input Buffers: \n";
     for (const auto &b : mod.buffers()) {
         sstr << b.name() << "\n";
+        buffer_map[b.name() + ".buffer"] = b;
     }
     sstr << "\n";
 
@@ -149,13 +172,14 @@ string print_cairo(const Module& mod) {
         sstr << f.name << " arg Buffers: \n" ;
         for (const auto &a : f.args) {
             sstr << a.name << "\n";
+            arg_map[a.name + ".buffer"] = a;
         }
     }
     sstr << "\n";
 
-    CodeGen_Cairo pln(sstr);
+    CodeGen_Cairo pln(sstr, buffer_map, arg_map);
     for (const auto &f : mod.functions()) {
-        sstr << f.name << "\n";
+        sstr << f.name << "\n\n";
         pln.print(f.body);
     }
 
